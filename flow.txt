@@ -1,0 +1,109 @@
+# idea
+
+personal podcast (either for oneself or to share thoughts with someone else)
+
+# implementation
+
+webaudio + s3 + cloudflare worker
+
+page has a prompt, a headline of an article that gets linked (must be sanitized)
+
+Podcast feed:
+
+```
+Item:
+  Title: <name>'s thoughts on <article>
+
+  Description:
+    Thoughts on [<article>]
+
+    [Report inappropriate content]
+
+  Image: generated
+  Explicit: true
+  pubDate: <date>
+
+```
+
+
+
+
+## client details
+
+javascript webaudio (needs iOS safari support)
+
+### recorder details
+
+create AudioContext
+
+create scriptProcessorNode (for iOS support)
+
+wire up so that it reads into an AudioBuffer
+
+when buffer full, spill into a Float32Array
+
+to edit, encode to Wav
+
+to snip, update Float32Array and reencode to Wav, reload edit
+
+to upload, reencode to mp3
+
+### UI details
+
+URL to create a prompt page (to remind one of the topic), button to record
+
+on click record button, webaudio buffer filled
+
+maybe have button for section break?
+
+once done, in page editing (cut out sections, move sections)
+  this happens on the raw sample buffer
+
+on finish, apply basic filters, add generated music, add ad inserts, convert to mp3 and upload to s3 under creds
+
+for two person podcast, transfer p2 to p1, sequence align sample buffers and take average between both (where? in browser or in cloudflare worker?)
+
+ - BLAST-style sequence alignment on every sample is too computationally/memory intensive
+ - use lamport timestamps to periodically bound the approx time of samples, and use that to create a global alignment
+ - every 15 seconds:
+  - t1 <- current-sample-number, p1.send(p2, 'sync')
+  - p2.recv(p1), p2.send(p1, 'sync-ack', current-sample-number)
+  - t3 <- p1.recv(p1)
+   t1 < t2 < t3
+ - sequence align sample segment between t1 and t3
+ - use spring model to globally align
+ 
+TODO: whose creds
+TODO: where to do sequence alignment?
+
+## server details
+
+page "Record" - provides prompt, Amazon cognito creds
+
+page "Owner Feed" - generates RSS feed for podcast, all episodes
+
+page "Public Feed" - generates RSS feed for podcast, only published episodes
+
+page "Report Inappropriate" - removes podcast from feed
+
+page "Owner" - shows all inappropriate reports, sizes, stats, submit to Apple/Google/Spotify
+
+page "Admin" - shows all owner pages
+
+
+
+# Resources
+
+https://help.apple.com/itc/podcasts_connect/#/itcbaf351599
+
+https://developer.mozilla.org/en-US/docs/Web/API/AudioBuffer/getChannelData
+
+https://github.com/higuma/wav-audio-encoder-js/blob/master/lib/WavAudioEncoder.js
+
+https://wavesurfer-js.org/plugins/regions.html
+
+https://developer.mozilla.org/en-US/docs/Web/API/BiquadFilterNode
+
+https://paulbakaus.com/tutorials/html5/web-audio-on-ios/
+
+https://dsp.stackexchange.com/questions/3581/algorithms-to-mix-audio-signals-without-clipping
