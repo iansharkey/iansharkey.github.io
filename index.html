@@ -1,277 +1,191 @@
+<!DOCTYPE html>
+
 <html>
-  <body>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body>
+    <h1>Audio</h1>
 
-    <div style="max-width: 28em;">
-		<p>Convert recorded audio to:</p>
-		<select id="encodingTypeSelect">
-		  <option value="wav">Waveform Audio (.wav)</option>
-		  <option value="mp3">MP3 (MPEG-1 Audio Layer III) (.mp3)</option>
-		  <option value="ogg">Ogg Vorbis (.ogg)</option>
-		</select>
-		<div id="controls">
-			<button id="recordButton">Record</button>
-			<button id="stopButton" disabled="">Stop</button>
-			<button id="keepButton">Keep Region</button>
-			<button id="uploadButton">Upload to S3</button>
-		</div>
-		<div id="formats">Format: 2 channel mp3 @ 44.1kHz</div>
-		<pre>Log</pre>
-		<pre id="log">
- </pre>
+    <button id="startRecordingButton">Start recording</button>
+    <button id="stopRecordingButton">Stop recording</button>
+    <button id="playButton">Play</button>
+    <button id="downloadButton">Download</button>
 
-		<pre>Recordings</pre>
-		<ol id="recordingsList"></ol>
-	</div>
-    <script src="https://unpkg.com/wavesurfer.js"></script>
-    <script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.regions.min.js"></script>
-
-    <script src="lib/WebAudioRecorder.min.js"></script>
-<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js"></script>
-<script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-
-<div id="waveform"></div>    
-<script type="text/javascript">
-//Bucket Configurations
-var bucketName = "personalpodcast";
-var bucketRegion = "us-east-2";
-
-  var IdentityPoolId = "us-east-2:dc78fe1b-579b-440e-9057-1899ee68c94e";
-  
- AWS.config.update({
-                region: bucketRegion,
-                credentials: new AWS.CognitoIdentityCredentials({
-                    IdentityPoolId: IdentityPoolId
-                })
-            });
-
-            var s3 = new AWS.S3({
-                apiVersion: '2006-03-01',
-                params: {Bucket: bucketName}
-        });
-</script>
-    
     <script>
-//webkitURL is deprecated but nevertheless
-URL = window.URL || window.webkitURL;
+        var startRecordingButton = document.getElementById("startRecordingButton");
+        var stopRecordingButton = document.getElementById("stopRecordingButton");
+        var playButton = document.getElementById("playButton");
+        var downloadButton = document.getElementById("downloadButton");
 
-var gumStream; 						//stream from getUserMedia()
-var recorder; 						//WebAudioRecorder object
-var input; 							//MediaStreamAudioSourceNode  we'll be recording
-var encodingType; 					//holds selected encoding for resulting audio (file)
-var encodeAfterRecord = true;       // when to encode
 
-// shim for AudioContext when it's not avb. 
-var AudioContext = window.AudioContext || window.webkitAudioContext;
-var audioContext; //new audio context to help us record
+        var leftchannel = [];
+        var rightchannel = [];
+        var recorder = null;
+        var recordingLength = 0;
+        var volume = null;
+        var mediaStream = null;
+        var sampleRate = 44100;
+        var context = null;
+      var blob = null;
+      var gumStream = null;
 
-var encodingTypeSelect = document.getElementById("encodingTypeSelect");
-var recordButton = document.getElementById("recordButton");
-var stopButton = document.getElementById("stopButton");
+        startRecordingButton.addEventListener("click", function () {
+            // Initialize recorder
 
-//add events to those 2 buttons
-recordButton.addEventListener("click", startRecording);
-stopButton.addEventListener("click", stopRecording);
-      keepButton.addEventListener("click", keepHighlightedRegions);
-      uploadButton.addEventListener("click", uploadToS3);
-      
-function startRecording() {
-	console.log("startRecording() called");
+            navigator.mediaDevices.getUserMedia( {
+                audio: true
+            }).then(
+            function (e) {
+                console.log("user consent");
 
-	/*
-		Simple constraints object, for more advanced features see
-		https://addpipe.com/blog/audio-constraints-getusermedia/
-	*/
-    
-    var constraints = { audio: true, video:false }
+                // creates the audio context
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                context = new AudioContext();
 
-    /*
-    	We're using the standard promise based getUserMedia() 
-    	https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
-	*/
+                // creates an audio node from the microphone incoming stream
+                mediaStream = context.createMediaStreamSource(e);
 
-	navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-		__log("getUserMedia() success, stream created, initializing WebAudioRecorder...");
+		gumStream = e;
+                // https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
+                // bufferSize: the onaudioprocess event is called when the buffer is full
+                var bufferSize = undefined;
+                var numberOfInputChannels = 2;
+                var numberOfOutputChannels = 2;
+                if (context.createScriptProcessor) {
+                    recorder = context.createScriptProcessor(bufferSize, numberOfInputChannels, numberOfOutputChannels);
+                } else {
+                    recorder = context.createJavaScriptNode(bufferSize, numberOfInputChannels, numberOfOutputChannels);
+                }
 
-		/*
-			create an audio context after getUserMedia is called
-			sampleRate might change after getUserMedia is called, like it does on macOS when recording through AirPods
-			the sampleRate defaults to the one set in your OS for your playback device
-
-		*/
-		audioContext = new AudioContext();
-
-		//update the format 
-		document.getElementById("formats").innerHTML="Format: 2 channel "+encodingTypeSelect.options[encodingTypeSelect.selectedIndex].value+" @ "+audioContext.sampleRate/1000+"kHz"
-
-		//assign to gumStream for later use
-		gumStream = stream;
+                // we connect the recorder
 		
-		/* use the stream */
-		input = audioContext.createMediaStreamSource(stream);
+		var gain = context.createGain();
+		mediaStream.connect(gain);
+		gain.connect(recorder);
+
+                recorder.connect(context.destination);
 		
-		//stop the input from playing back through the speakers
-		//input.connect(audioContext.destination)
-
-		//get the encoding 
-		encodingType = encodingTypeSelect.options[encodingTypeSelect.selectedIndex].value;
 		
-		//disable the encoding selector
-		encodingTypeSelect.disabled = true;
+		recorder.onaudioprocess = function (e) {
+                    leftchannel.push(e.inputBuffer.getChannelData(0));
+                    rightchannel.push(e.inputBuffer.getChannelData(1));
+                    recordingLength += bufferSize;
+                }
 
-		recorder = new WebAudioRecorder(input, {
-		  workerDir: "lib/", // must end with slash
-		  encoding: encodingType,
-		  numChannels:2, //2 is the default, mp3 encoding supports only 2
-		  onEncoderLoading: function(recorder, encoding) {
-		    // show "loading encoder..." display
-		    __log("Loading "+encoding+" encoder...");
-		  },
-		  onEncoderLoaded: function(recorder, encoding) {
-		    // hide "loading encoder..." display
-		    __log(encoding+" encoder loaded");
-		  }
-		});
+            },
+                        function (e) {
+                            console.error(e);
+                        });
+        });
 
-		recorder.onComplete = function(recorder, blob) { 
-			__log("Encoding complete");
-			createDownloadLink(blob,recorder.encoding);
-			encodingTypeSelect.disabled = false;
-		}
+        stopRecordingButton.addEventListener("click", function () {
 
-		recorder.setOptions({
-		  timeLimit:120,
-		  encodeAfterRecord:encodeAfterRecord,
-	      ogg: {quality: 0.5},
-	      mp3: {bitRate: 160}
-	    });
+            // stop recording
+            recorder.disconnect();
+            mediaStream.disconnect();
+	    gumStream.getAudioTracks()[0].stop();	    
 
-		//start the recording process
-		recorder.startRecording();
+            // we flat the left and right channels down
+            // Float32Array[] => Float32Array
+            var leftBuffer = flattenArray(leftchannel, recordingLength);
+            var rightBuffer = flattenArray(rightchannel, recordingLength);
+            // we interleave both channels together
+            // [left[0],right[0],left[1],right[1],...]
+            var interleaved = interleave(leftBuffer, rightBuffer);
 
-		 __log("Recording started");
+            // we create our wav file
+            var buffer = new ArrayBuffer(44 + interleaved.length * 2);
+            var view = new DataView(buffer);
 
-	}).catch(function(err) {
-	  	//enable the record button if getUSerMedia() fails
-    	recordButton.disabled = false;
-    	    stopButton.disabled = true;
-	    console.log(err);
+            // RIFF chunk descriptor
+            writeUTFBytes(view, 0, 'RIFF');
+            view.setUint32(4, 44 + interleaved.length * 2, true);
+            writeUTFBytes(view, 8, 'WAVE');
+            // FMT sub-chunk
+            writeUTFBytes(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // chunkSize
+            view.setUint16(20, 1, true); // wFormatTag
+            view.setUint16(22, 2, true); // wChannels: stereo (2 channels)
+            view.setUint32(24, sampleRate, true); // dwSamplesPerSec
+            view.setUint32(28, sampleRate * 4, true); // dwAvgBytesPerSec
+            view.setUint16(32, 4, true); // wBlockAlign
+            view.setUint16(34, 16, true); // wBitsPerSample
+            // data sub-chunk
+            writeUTFBytes(view, 36, 'data');
+            view.setUint32(40, interleaved.length * 2, true);
 
-	});
+            // write the PCM samples
+            var index = 44;
+            var volume = 1;
+            for (var i = 0; i < interleaved.length; i++) {
+                view.setInt16(index, interleaved[i] * (0x7FFF * volume), true);
+                index += 2;
+            }
 
-	//disable the record button
-    recordButton.disabled = true;
-    stopButton.disabled = false;
-}
+            // our final blob
+            blob = new Blob([view], { type: 'audio/wav' });
+        });
 
-function stopRecording() {
-	console.log("stopRecording() called");
-	
-	//stop microphone access
-	gumStream.getAudioTracks()[0].stop();
+        playButton.addEventListener("click", function () {
+            if (blob == null) {
+                return;
+            }
 
-	//disable the stop button
-	stopButton.disabled = true;
-	recordButton.disabled = false;
-	
-	//tell the recorder to finish the recording (stop recording + encode the recorded audio)
-	recorder.finishRecording();
+            var url = window.URL.createObjectURL(blob);
+            var audio = new Audio(url);
+            audio.play();
+        });
 
-	__log('Recording stopped');
-}
+        downloadButton.addEventListener("click", function () {
+            if (blob == null) {
+                return;
+            }
 
-      
+            var url = URL.createObjectURL(blob);
 
-var wavesurfer = WaveSurfer.create({
-    container: '#waveform',
-    audioContext: audioContext,
-    waveColor: 'violet',
-    progressColor: 'purple',
-    normalize: true,
-    barWidth: 5,
-    plugins: [
-	WaveSurfer.regions.create({})
-	]
-});
+            var a = document.createElement("a");
+            document.body.appendChild(a);
+            a.style = "display: none";
+            a.href = url;
+            a.download = "sample.wav";
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
 
-
-      
-function keepHighlightedRegions() {
-    // save initial region list
-    var initialRegionList = Object.values(wavesurfer.regions.list);
-
-    // sort the regions
-    initialRegionList.sort((a, b) => (a.start < b.start ) ? 1 : -1 );
-
-    var clearRegionList = [];
-    var start = 0;
-    // invert the regions
-    for (var region of initialRegionList) {
-	var clearRegion = wavesurfer.addRegion({start: start, end: region.start});
-	clearRegionList.push(clearRegion);	
-    }
-
-    // clear existing regions
-    for (var region of clearRegionList ) {
-	region.remove();
-    }
-    
-}
-
-      function uploadToS3()
-      {
-
-      }
-      
-function createDownloadLink(blob,encoding) {
-	
-	var url = URL.createObjectURL(blob);
-//	var au = document.createElement('audio');
-//	var li = document.createElement('li');
-	var link = document.createElement('a');
-
-	//add controls to the <audio> element
-//	au.controls = true;
-//	au.src = url;
-
-	//link the a element to the blob
-	link.href = url;
-	link.download = new Date().toISOString() + '.'+encoding;
-	link.innerHTML = link.download;
-
-	//add the new audio and a elements to the li element
-//	li.appendChild(au);
-//	li.appendChild(link);
-
-	//add the li element to the ordered list
-//    recordingsList.appendChild(li);
-
-    myBlob = blob;
-    wavesurfer.loadBlob(blob);
-    wavesurfer.enableDragSelection({});
-
-    /*
-s3.upload({
-        Key: link.download,
-        Body: blob,
-        ACL: 'private'
-        }, function(err, data) {
-        if(err) {
-            __log(err, data);
+        function flattenArray(channelBuffer, recordingLength) {
+            var result = new Float32Array(recordingLength);
+            var offset = 0;
+            for (var i = 0; i < channelBuffer.length; i++) {
+                var buffer = channelBuffer[i];
+                result.set(buffer, offset);
+                offset += buffer.length;
+            }
+            return result;
         }
-	else{
-	    //alert('Successfully Uploaded!');
-	}
-        }).on('httpUploadProgress', function (progress) {
-      });
-*/
-}
-//helper function
-function __log(e, data) {
-	log.innerHTML += "\n" + e + " " + (data || '');
-}
+
+        function interleave(leftChannel, rightChannel) {
+            var length = leftChannel.length + rightChannel.length;
+            var result = new Float32Array(length);
+
+            var inputIndex = 0;
+
+            for (var index = 0; index < length;) {
+                result[index++] = leftChannel[inputIndex];
+                result[index++] = rightChannel[inputIndex];
+                inputIndex++;
+            }
+            return result;
+        }
+
+        function writeUTFBytes(view, offset, string) {
+            for (var i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
 
     </script>
-
-  </body>
-  
+</body>
 </html>
+
