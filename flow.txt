@@ -107,3 +107,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/BiquadFilterNode
 https://paulbakaus.com/tutorials/html5/web-audio-on-ios/
 
 https://dsp.stackexchange.com/questions/3581/algorithms-to-mix-audio-signals-without-clipping
+
+https://gist.github.com/meziantou/edb7217fddfbb70e899e
+
+https://softwareontheroad.com/aws-s3-secure-direct-upload/

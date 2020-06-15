@@ -4,20 +4,55 @@
 <head>
     <meta charset="utf-8" />
     <title></title>
+    <script src="lib/WavAudioEncoder.js"></script>
+    <script src="lib/Mp3LameEncoder.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.regions.min.js"></script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+
 </head>
 <body>
     <h1>Audio</h1>
 
     <button id="startRecordingButton">Start recording</button>
     <button id="stopRecordingButton">Stop recording</button>
+    <button id="keepButton">Keep Region</button>
+    
     <button id="playButton">Play</button>
-    <button id="downloadButton">Download</button>
 
+    <button id="uploadButton">Upload to S3</button>    
+    <div id='waveform'></div>
+    
     <script>
+
+var bucketName = "personalpodcast";
+var bucketRegion = "us-east-2";
+
+  var IdentityPoolId = "us-east-2:dc78fe1b-579b-440e-9057-1899ee68c94e";
+  
+ AWS.config.update({
+                region: bucketRegion,
+                credentials: new AWS.CognitoIdentityCredentials({
+                    IdentityPoolId: IdentityPoolId
+                })
+            });
+
+            var s3 = new AWS.S3({
+                apiVersion: '2006-03-01',
+                params: {Bucket: bucketName}
+        });
+      
         var startRecordingButton = document.getElementById("startRecordingButton");
         var stopRecordingButton = document.getElementById("stopRecordingButton");
         var playButton = document.getElementById("playButton");
         var downloadButton = document.getElementById("downloadButton");
+      var keepButton = document.getElementById("keepButton");
+      var uploadButton = document.getElementById("uploadButton");
+      
+      keepButton.addEventListener("click", keepHighlightedRegions);
+      uploadButton.addEventListener("click", uploadToS3);
 
 
         var leftchannel = [];
@@ -26,19 +61,32 @@
         var recordingLength = 0;
         var volume = null;
         var mediaStream = null;
-        var sampleRate = 44100;
         var context = null;
       var blob = null;
       var gumStream = null;
+      var wavesurfer;
+
+            	    wavesurfer = WaveSurfer.create({
+		    container: '#waveform',
+		    audioContext: context,
+		    waveColor: 'violet',
+		    progressColor: 'purple',
+		    normalize: true,
+		    barWidth: 5,
+		    plugins: [
+			WaveSurfer.regions.create({})
+		    ]
+		});
 
         startRecordingButton.addEventListener("click", function () {
             // Initialize recorder
+	    leftchannel = [];
+	    rightchannel = [];
 
             navigator.mediaDevices.getUserMedia( {
                 audio: true
             }).then(
             function (e) {
-                console.log("user consent");
 
                 // creates the audio context
                 window.AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -50,7 +98,7 @@
 		gumStream = e;
                 // https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
                 // bufferSize: the onaudioprocess event is called when the buffer is full
-                var bufferSize = undefined;
+                var bufferSize = 2048;
                 var numberOfInputChannels = 2;
                 var numberOfOutputChannels = 2;
                 if (context.createScriptProcessor) {
@@ -69,9 +117,9 @@
 		
 		
 		recorder.onaudioprocess = function (e) {
-                    leftchannel.push(e.inputBuffer.getChannelData(0));
-                    rightchannel.push(e.inputBuffer.getChannelData(1));
-                    recordingLength += bufferSize;
+                    leftchannel.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+                    rightchannel.push(new Float32Array(e.inputBuffer.getChannelData(1)));
+                    recordingLength += e.inputBuffer.getChannelData(0).length;
                 }
 
             },
@@ -80,6 +128,21 @@
                         });
         });
 
+
+      function encode(left, right, recordingLength) {
+            leftBuffer = flattenArray(left, recordingLength);
+            rightBuffer = flattenArray(right, recordingLength);
+
+	    var encoder = new WavAudioEncoder(context.sampleRate, 2);
+	    encoder.encode([leftBuffer, rightBuffer]);
+	    blob = encoder.finish();
+
+	  wavesurfer.empty();
+	  wavesurfer.clearRegions();
+	    wavesurfer.loadBlob(blob);
+	    wavesurfer.enableDragSelection({});
+      }
+      
         stopRecordingButton.addEventListener("click", function () {
 
             // stop recording
@@ -89,43 +152,7 @@
 
             // we flat the left and right channels down
             // Float32Array[] => Float32Array
-            var leftBuffer = flattenArray(leftchannel, recordingLength);
-            var rightBuffer = flattenArray(rightchannel, recordingLength);
-            // we interleave both channels together
-            // [left[0],right[0],left[1],right[1],...]
-            var interleaved = interleave(leftBuffer, rightBuffer);
-
-            // we create our wav file
-            var buffer = new ArrayBuffer(44 + interleaved.length * 2);
-            var view = new DataView(buffer);
-
-            // RIFF chunk descriptor
-            writeUTFBytes(view, 0, 'RIFF');
-            view.setUint32(4, 44 + interleaved.length * 2, true);
-            writeUTFBytes(view, 8, 'WAVE');
-            // FMT sub-chunk
-            writeUTFBytes(view, 12, 'fmt ');
-            view.setUint32(16, 16, true); // chunkSize
-            view.setUint16(20, 1, true); // wFormatTag
-            view.setUint16(22, 2, true); // wChannels: stereo (2 channels)
-            view.setUint32(24, sampleRate, true); // dwSamplesPerSec
-            view.setUint32(28, sampleRate * 4, true); // dwAvgBytesPerSec
-            view.setUint16(32, 4, true); // wBlockAlign
-            view.setUint16(34, 16, true); // wBitsPerSample
-            // data sub-chunk
-            writeUTFBytes(view, 36, 'data');
-            view.setUint32(40, interleaved.length * 2, true);
-
-            // write the PCM samples
-            var index = 44;
-            var volume = 1;
-            for (var i = 0; i < interleaved.length; i++) {
-                view.setInt16(index, interleaved[i] * (0x7FFF * volume), true);
-                index += 2;
-            }
-
-            // our final blob
-            blob = new Blob([view], { type: 'audio/wav' });
+	    encode(leftchannel, rightchannel, recordingLength);
         });
 
         playButton.addEventListener("click", function () {
@@ -133,12 +160,13 @@
                 return;
             }
 
-            var url = window.URL.createObjectURL(blob);
-            var audio = new Audio(url);
-            audio.play();
+            //var url = window.URL.createObjectURL(blob);
+            //var audio = new Audio(url);
+            //audio.play();
+	    wavesurfer.play();
         });
 
-        downloadButton.addEventListener("click", function () {
+        /*downloadButton.addEventListener("click", function () {
             if (blob == null) {
                 return;
             }
@@ -152,7 +180,7 @@
             a.download = "sample.wav";
             a.click();
             window.URL.revokeObjectURL(url);
-        });
+        });*/
 
         function flattenArray(channelBuffer, recordingLength) {
             var result = new Float32Array(recordingLength);
@@ -165,26 +193,51 @@
             return result;
         }
 
-        function interleave(leftChannel, rightChannel) {
-            var length = leftChannel.length + rightChannel.length;
-            var result = new Float32Array(length);
+function keepHighlightedRegions() {
+    // save initial region list
+    var initialRegionList = Object.values(wavesurfer.regions.list);
 
-            var inputIndex = 0;
+    // sort the regions
+    initialRegionList.sort((a, b) => (a.start > b.start ) ? 1 : -1 );
 
-            for (var index = 0; index < length;) {
-                result[index++] = leftChannel[inputIndex];
-                result[index++] = rightChannel[inputIndex];
-                inputIndex++;
-            }
-            return result;
+    var newLeft = [];
+    var newRight = [];
+    var recordingSize = 0;
+    for (var region of initialRegionList) {
+	var sampleStart = Math.floor(region.start*context.sampleRate);
+	var sampleEnd = Math.floor(region.end*context.sampleRate);
+
+	recordingSize += (sampleEnd - sampleStart + 1);
+	newLeft.push(leftBuffer.subarray(sampleStart, sampleEnd));
+	newRight.push(rightBuffer.subarray(sampleStart, sampleEnd));
+    }
+
+    encode(newLeft, newRight, recordingSize);
+    
+}
+
+      function uploadToS3()
+      {
+	  var key = new Date().toISOString() + '.mp3';
+	  var encoder = new Mp3LameEncoder(context.sampleRate, 160);
+	    encoder.encode([leftBuffer, rightBuffer]);
+	    var mp3blob = encoder.finish();
+
+	  s3.upload({
+        Key: key,
+        Body: mp3blob,
+        ACL: 'private'
+        }, function(err, data) {
+        if(err) {
+         
         }
-
-        function writeUTFBytes(view, offset, string) {
-            for (var i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
-        }
-
+	else{
+	    //alert('Successfully Uploaded!');
+	}
+        }).on('httpUploadProgress', function (progress) {
+      });
+      }
+      
     </script>
 </body>
 </html>
