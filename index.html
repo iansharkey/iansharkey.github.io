@@ -227,11 +227,17 @@ function keepHighlightedRegions() {
 
       function uploadToS3()
       {
-	  var key = new Date().toISOString() + '.wav';
+	  var key = new Date().toISOString() + '.mp3';
+	  var encoder = new Mp3LameEncoder(context.sampleRate, 160);
+	  for ( var sampleBuffer of leftchannel )
+	  {
+	      encoder.encode([sampleBuffer, sampleBuffer]);
+	  }
+	  var mp3blob = encoder.finish();
 
 	  s3.upload({
         Key: key,
-        Body: blob,
+        Body: mp3blob,
         ACL: 'private'
         }, function(err, data) {
         if(err) {
