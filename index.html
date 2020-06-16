@@ -99,7 +99,7 @@ var bucketRegion = "us-east-2";
 
                 gain.connect(recorder);
 
-                recorder.connect(context.destination);
+
 
 		
 		recorder.onaudioprocess = function (e) {
@@ -127,6 +127,7 @@ var bucketRegion = "us-east-2";
 
 		gumStream = e;
 		mediaStream.connect(gain);
+		recorder.connect(context.destination);
 
             },
                         function (e) {
