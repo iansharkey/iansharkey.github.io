@@ -121,7 +121,7 @@ var bucketRegion = "us-east-2";
 		
 		recorder.onaudioprocess = function (e) {
                     leftchannel.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-                    rightchannel.push(new Float32Array(e.inputBuffer.getChannelData(1)));
+                    //rightchannel.push(new Float32Array(e.inputBuffer.getChannelData(1)));
                     recordingLength += e.inputBuffer.getChannelData(0).length;
                 }
 
@@ -132,12 +132,12 @@ var bucketRegion = "us-east-2";
         });
 
 
-      function encode(left, right, recordingLength) {
+      function encode(left, recordingLength) {
             leftBuffer = flattenArray(left, recordingLength);
-            rightBuffer = flattenArray(right, recordingLength);
+          //rightBuffer = flattenArray(right, recordingLength);
 
-	    var encoder = new WavAudioEncoder(context.sampleRate, 2);
-	    encoder.encode([leftBuffer, rightBuffer]);
+	    var encoder = new WavAudioEncoder(context.sampleRate, 1);
+	    encoder.encode([leftBuffer]);
 	    blob = encoder.finish();
 
 	  wavesurfer.empty();
@@ -155,7 +155,7 @@ var bucketRegion = "us-east-2";
 
             // we flat the left and right channels down
             // Float32Array[] => Float32Array
-	    encode(leftchannel, rightchannel, recordingLength);
+	    encode(leftchannel, recordingLength);
         });
 
         playButton.addEventListener("click", function () {
@@ -212,10 +212,10 @@ function keepHighlightedRegions() {
 
 	recordingSize += (sampleEnd - sampleStart + 1);
 	newLeft.push(leftBuffer.subarray(sampleStart, sampleEnd));
-	newRight.push(rightBuffer.subarray(sampleStart, sampleEnd));
+	//newRight.push(rightBuffer.subarray(sampleStart, sampleEnd));
     }
 
-    encode(newLeft, newRight, recordingSize);
+    encode(newLeft, recordingSize);
     
 }
 
@@ -223,7 +223,7 @@ function keepHighlightedRegions() {
       {
 	  var key = new Date().toISOString() + '.mp3';
 	  var encoder = new Mp3LameEncoder(context.sampleRate, 160);
-	    encoder.encode([leftBuffer, rightBuffer]);
+	    encoder.encode([leftBuffer]);
 	    var mp3blob = encoder.finish();
 
 	  s3.upload({
