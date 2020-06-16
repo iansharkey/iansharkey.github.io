@@ -163,10 +163,10 @@ var bucketRegion = "us-east-2";
                 return;
             }
 
-            //var url = window.URL.createObjectURL(blob);
-            //var audio = new Audio(url);
-            //audio.play();
-	    wavesurfer.play();
+            var url = window.URL.createObjectURL(blob);
+            var audio = new Audio(url);
+            audio.play();
+	    //wavesurfer.play();
         });
 
         /*downloadButton.addEventListener("click", function () {
