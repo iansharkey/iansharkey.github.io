@@ -139,12 +139,14 @@ var bucketRegion = "us-east-2";
 
 
       function encode(left, recordingLength) {
-            leftBuffer = flattenArray(left, recordingLength);
+           // leftBuffer = flattenArray(left, recordingLength);
           //rightBuffer = flattenArray(right, recordingLength);
 
-	    var encoder = new WavAudioEncoder(context.sampleRate, 2);
-	  encoder.encode([leftBuffer, leftBuffer]);
-	    blob = encoder.finish();
+	  var encoder = new WavAudioEncoder(context.sampleRate, 1);
+	  for (var sampleBuffer of left) {
+	      encoder.encode([sampleBuffer]);
+	  }
+	  blob = encoder.finish();
 
 	  wavesurfer.empty();
 	  wavesurfer.clearRegions();
