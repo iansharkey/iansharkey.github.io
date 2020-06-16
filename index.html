@@ -78,6 +78,10 @@ var bucketRegion = "us-east-2";
 		    ]
 		});
 
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      context = new AudioContext();
+
+      
         startRecordingButton.addEventListener("click", function () {
             // Initialize recorder
 	    leftchannel = [];
@@ -89,8 +93,6 @@ var bucketRegion = "us-east-2";
             function (e) {
 
                 // creates the audio context
-                window.AudioContext = window.AudioContext || window.webkitAudioContext;
-                context = new AudioContext();
 
                 // creates an audio node from the microphone incoming stream
                 mediaStream = context.createMediaStreamSource(e);
