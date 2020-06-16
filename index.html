@@ -142,9 +142,9 @@ var bucketRegion = "us-east-2";
            // leftBuffer = flattenArray(left, recordingLength);
           //rightBuffer = flattenArray(right, recordingLength);
 
-	  var encoder = new WavAudioEncoder(context.sampleRate, 1);
+	  var encoder = new WavAudioEncoder(context.sampleRate, 2);
 	  for (var sampleBuffer of left) {
-	      encoder.encode([sampleBuffer]);
+	      encoder.encode([sampleBuffer, sampleBuffer]);
 	  }
 	  blob = encoder.finish();
 
