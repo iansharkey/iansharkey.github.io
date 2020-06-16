@@ -223,7 +223,7 @@ function keepHighlightedRegions() {
       {
 	  var key = new Date().toISOString() + '.mp3';
 	  var encoder = new Mp3LameEncoder(context.sampleRate, 160);
-	  encoder.encode([leftBuffer, rightBuffer]);
+	  encoder.encode([leftBuffer, leftBuffer]);
 	    var mp3blob = encoder.finish();
 
 	  s3.upload({
