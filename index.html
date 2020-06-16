@@ -120,7 +120,7 @@ var bucketRegion = "us-east-2";
 		
 		
 		recorder.onaudioprocess = function (e) {
-                    leftchannel.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+                    leftchannel.push(e.inputBuffer.getChannelData(0));
                     //rightchannel.push(new Float32Array(e.inputBuffer.getChannelData(1)));
                     recordingLength += e.inputBuffer.getChannelData(0).length;
                 }
