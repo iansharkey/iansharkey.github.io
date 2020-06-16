@@ -228,6 +228,10 @@ function keepHighlightedRegions() {
       function uploadToS3()
       {
 	  var key = new Date().toISOString() + '.mp3';
+	  Mp3LameEncoderConfig = {
+	      memoryInitializerPrefixURL: "../vendor/",
+	      TOTAL_MEMORY: 1073741824,
+	  }
 	  var encoder = new Mp3LameEncoder(context.sampleRate, 160);
 	  encoder.encode([leftBuffer, leftBuffer]);
 	    var mp3blob = encoder.finish();
