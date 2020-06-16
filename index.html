@@ -101,8 +101,8 @@ var bucketRegion = "us-east-2";
                 // https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
                 // bufferSize: the onaudioprocess event is called when the buffer is full
                 var bufferSize = 2048;
-                var numberOfInputChannels = 2;
-                var numberOfOutputChannels = 2;
+                var numberOfInputChannels = 1;
+                var numberOfOutputChannels = 1;
                 if (context.createScriptProcessor) {
                     recorder = context.createScriptProcessor(bufferSize, numberOfInputChannels, numberOfOutputChannels);
                 } else {
@@ -112,6 +112,7 @@ var bucketRegion = "us-east-2";
                 // we connect the recorder
 		
 		var gain = context.createGain();
+		gain.gain.setValueAtTime(1.0, context.currentTime);
 		mediaStream.connect(gain);
 		gain.connect(recorder);
 
