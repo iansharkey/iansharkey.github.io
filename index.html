@@ -112,7 +112,7 @@ var bucketRegion = "us-east-2";
                 // we connect the recorder
 		
 		var gain = context.createGain();
-		gain.gain.setValueAtTime(1.0, context.currentTime);
+		//gain.gain.setValueAtTime(1.0, context.currentTime);
 		mediaStream.connect(gain);
 		gain.connect(recorder);
 
