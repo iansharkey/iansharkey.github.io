@@ -66,6 +66,16 @@ var bucketRegion = "us-east-2";
       var gumStream = null;
       var wavesurfer;
 
+      
+      
+        startRecordingButton.addEventListener("click", function () {
+            // Initialize recorder
+	    leftchannel = [];
+	    rightchannel = [];
+
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      context = new AudioContext();
+
             	    wavesurfer = WaveSurfer.create({
 		    container: '#waveform',
 		    audioContext: context,
@@ -78,17 +88,7 @@ var bucketRegion = "us-east-2";
 		    ]
 		});
 
-
-      
-      
-        startRecordingButton.addEventListener("click", function () {
-            // Initialize recorder
-	    leftchannel = [];
-	    rightchannel = [];
-
-      window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      context = new AudioContext();
-
+	    
                 // https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
                 // bufferSize: the onaudioprocess event is called when the buffer is full
                 var bufferSize = 2048;
@@ -169,10 +169,10 @@ var bucketRegion = "us-east-2";
                 return;
             }
 
-            var url = window.URL.createObjectURL(blob);
-            var audio = new Audio(url);
-            audio.play();
-	    //wavesurfer.play();
+            //var url = window.URL.createObjectURL(blob);
+            //var audio = new Audio(url);
+            //audio.play();
+	    wavesurfer.play();
         });
 
         /*downloadButton.addEventListener("click", function () {
