@@ -12,6 +12,29 @@
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 
 
+	<style>
+			.wrapper {
+				width: 500px;
+			}
+			
+			.progress-bar {
+				width: 100%;
+				background-color: #e0e0e0;
+				padding: 3px;
+				border-radius: 3px;
+				box-shadow: inset 0 1px 3px rgba(0, 0, 0, .2);
+			}
+			
+			.progress-bar-fill {
+				display: block;
+				height: 22px;
+				background-color: #659cef;
+				border-radius: 3px;
+				
+				transition: width 500ms ease-in-out;
+			}
+		</style>
+    
 </head>
 <body>
     <h1>Audio</h1>
@@ -24,6 +47,13 @@
 
     <button id="uploadButton">Upload to S3</button>    
     <div id='waveform'></div>
+
+    <div class="wrapper">
+      <div class="progress-bar">
+	<span id="progressSpan" class="progress-bar-fill" style="width: 0%;"></span>
+      </div>
+    </div>
+    
     
     <script>
 
@@ -50,21 +80,25 @@ var bucketRegion = "us-east-2";
         var downloadButton = document.getElementById("downloadButton");
       var keepButton = document.getElementById("keepButton");
       var uploadButton = document.getElementById("uploadButton");
+      var progressBar = document.getElementById("progressSpan");
       
       keepButton.addEventListener("click", keepHighlightedRegions);
       uploadButton.addEventListener("click", uploadToS3);
 
 
-        var leftchannel = [];
-        var rightchannel = [];
-        var recorder = null;
-        var recordingLength = 0;
-        var volume = null;
-        var mediaStream = null;
-        var context = null;
+      var leftchannel = [];
+      var rightchannel = [];
+      var recorder = null;
+      var recordingLength = 0;
+      var volume = null;
+      var mediaStream = null;
+      var context = null;
       var blob = null;
       var gumStream = null;
       var wavesurfer;
+      var bufferSize = 2048;
+      var numberOfInputChannels = 1;
+      var numberOfOutputChannels = 1;
 
       
       
@@ -91,9 +125,6 @@ var bucketRegion = "us-east-2";
 	    
                 // https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
                 // bufferSize: the onaudioprocess event is called when the buffer is full
-                var bufferSize = 2048;
-                var numberOfInputChannels = 1;
-                var numberOfOutputChannels = 1;
                 if (context.createScriptProcessor) {
                     recorder = context.createScriptProcessor(bufferSize, numberOfInputChannels, numberOfOutputChannels);
                 } else {
@@ -138,10 +169,7 @@ var bucketRegion = "us-east-2";
         });
 
 
-      function encode(left, recordingLength) {
-           // leftBuffer = flattenArray(left, recordingLength);
-          //rightBuffer = flattenArray(right, recordingLength);
-
+      function encode(left) {
 	  var encoder = new WavAudioEncoder(context.sampleRate, 2);
 	  for (var sampleBuffer of left) {
 	      encoder.encode([sampleBuffer, sampleBuffer]);
@@ -154,16 +182,14 @@ var bucketRegion = "us-east-2";
 	    wavesurfer.enableDragSelection({});
       }
       
-        stopRecordingButton.addEventListener("click", function () {
+      stopRecordingButton.addEventListener("click", function () {
 
             // stop recording
             recorder.disconnect();
             mediaStream.disconnect();
 	    gumStream.getAudioTracks()[0].stop();	    
 
-            // we flat the left and right channels down
-            // Float32Array[] => Float32Array
-	    encode(leftchannel, recordingLength);
+	    encode(leftchannel);
         });
 
         playButton.addEventListener("click", function () {
@@ -171,85 +197,75 @@ var bucketRegion = "us-east-2";
                 return;
             }
 
-            //var url = window.URL.createObjectURL(blob);
-            //var audio = new Audio(url);
-            //audio.play();
-	    wavesurfer.play();
+	    wavesurfer.playPause();
         });
 
-        /*downloadButton.addEventListener("click", function () {
-            if (blob == null) {
-                return;
-            }
+      function keepHighlightedRegions() {
+	  // save initial region list
+	  var initialRegionList = Object.values(wavesurfer.regions.list);
+	  
+	  // sort the regions
+	  initialRegionList.sort((a, b) => (a.start > b.start ) ? 1 : -1 );
 
-            var url = URL.createObjectURL(blob);
+	  var lastStart = 0;
+	  var newLeft = [];
+	  var lastIndex = 0;
+	  
+	  for (var region of initialRegionList) {
 
-            var a = document.createElement("a");
-            document.body.appendChild(a);
-            a.style = "display: none";
-            a.href = url;
-            a.download = "sample.wav";
-            a.click();
-            window.URL.revokeObjectURL(url);
-        });*/
+	      var sampleStart = Math.floor(region.start*context.sampleRate);
+	      var sampleEnd = Math.floor(region.end*context.sampleRate);
+	      sampleStart = Math.max(sampleStart, lastStart);
 
-        function flattenArray(channelBuffer, recordingLength) {
-            var result = new Float32Array(recordingLength);
-            var offset = 0;
-            for (var i = 0; i < channelBuffer.length; i++) {
-                var buffer = channelBuffer[i];
-                result.set(buffer, offset);
-                offset += buffer.length;
-            }
-            return result;
-        }
+	      // remove the correct number of sample buffers
+	      var startIndex = Math.max(Math.floor(sampleStart / bufferSize), lastIndex+1);
+	      var endIndex = Math.ceil(sampleEnd / bufferSize);
+	      sliceList = leftchannel.slice(startIndex, endIndex);
+	      for (var i of sliceList) {
+		  newLeft.push(i);
+	      }
+	      lastIndex = endIndex;
 
-function keepHighlightedRegions() {
-    // save initial region list
-    var initialRegionList = Object.values(wavesurfer.regions.list);
-
-    // sort the regions
-    initialRegionList.sort((a, b) => (a.start > b.start ) ? 1 : -1 );
-
-    var newLeft = [];
-    var newRight = [];
-    var recordingSize = 0;
-    for (var region of initialRegionList) {
-	var sampleStart = Math.floor(region.start*context.sampleRate);
-	var sampleEnd = Math.floor(region.end*context.sampleRate);
-
-	recordingSize += (sampleEnd - sampleStart + 1);
-	newLeft.push(leftBuffer.subarray(sampleStart, sampleEnd));
-	//newRight.push(rightBuffer.subarray(sampleStart, sampleEnd));
-    }
-
-    encode(newLeft, recordingSize);
+	      // handle overlapping regions
+	      lastStart = sampleEnd;
+	  }
+	  leftchannel = newLeft;
+	  
+	  encode(leftchannel);
+      }
     
-}
-
       function uploadToS3()
       {
 	  var key = new Date().toISOString() + '.mp3';
 	  var encoder = new Mp3LameEncoder(context.sampleRate, 160);
+	  
 	  for ( var sampleBuffer of leftchannel )
 	  {
 	      encoder.encode([sampleBuffer, sampleBuffer]);
 	  }
+	  delete leftchannel;
 	  var mp3blob = encoder.finish();
 
 	  s3.upload({
-        Key: key,
-        Body: mp3blob,
-        ACL: 'private'
-        }, function(err, data) {
-        if(err) {
+              Key: key,
+              Body: mp3blob,
+              ACL: 'private'
+          }, function(err, data) {
+              if(err) {
          
-        }
-	else{
-	    alert('Successfully Uploaded!');
-	}
-        }).on('httpUploadProgress', function (progress) {
-      });
+              }
+	      else{
+		  alert('Successfully Uploaded!');
+	      }
+          }).on('httpUploadProgress', function (progress) {
+	      if (progress["loaded"] && progress["total"]) {
+		  var loadedTotal = progress["loaded"];
+		  var sizeTotal = progress["total"];
+		   
+		  var progress = Math.round(loadedTotal / sizeTotal * 100);
+		  progressBar.style.width =  progress + "%";
+	      }
+	  });
       }
       
     </script>
