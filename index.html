@@ -257,7 +257,7 @@ var bucketRegion = "us-east-2";
 	      {
 		  encoder.encode([sampleBuffer, sampleBuffer]);
 	      }
-	      delete leftchannel;
+
 	      var mp3blob = encoder.finish();
 
 	      s3.upload({
@@ -269,7 +269,7 @@ var bucketRegion = "us-east-2";
 		      
 		  }
 		  else{
-		      alert('Successfully Uploaded!');
+		      //alert('Successfully Uploaded!');
 		  }
               }).on('httpUploadProgress', function (progress) {
 		  if (progress["loaded"] && progress["total"]) {
@@ -277,6 +277,7 @@ var bucketRegion = "us-east-2";
 		      var sizeTotal = progress["total"];
 		      
 		      var progress = Math.round(loadedTotal / sizeTotal * 100);
+		      console.log(progress);
 		      progressBar.style.width =  progress + "%";
 		  }
 	      });
