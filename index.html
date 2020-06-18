@@ -8,7 +8,6 @@
     <script src="lib/Mp3LameEncoder.js"></script>
     <script src="https://unpkg.com/wavesurfer.js"></script>
     <script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.regions.min.js"></script>
-    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 
 
@@ -44,7 +43,6 @@
     <button id="keepButton">Keep Region</button>
     <button id="clearButton">Clear Region</button>
     
-    
     <button id="playButton">Play</button>
 
     <button id="uploadButton">Upload to S3</button>    
@@ -64,18 +62,7 @@ var bucketRegion = "us-east-2";
 
   var IdentityPoolId = "us-east-2:dc78fe1b-579b-440e-9057-1899ee68c94e";
   
- AWS.config.update({
-                region: bucketRegion,
-                credentials: new AWS.CognitoIdentityCredentials({
-                    IdentityPoolId: IdentityPoolId
-                })
-            });
-
-            var s3 = new AWS.S3({
-                apiVersion: '2006-03-01',
-                params: {Bucket: bucketName}
-        });
-      
+    
       var startRecordingButton = document.getElementById("startRecordingButton");
       var stopRecordingButton = document.getElementById("stopRecordingButton");
       var playButton = document.getElementById("playButton");
@@ -110,20 +97,26 @@ var bucketRegion = "us-east-2";
 	    leftchannel = [];
 	    rightchannel = [];
 
-      window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      context = new AudioContext();
+	    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+	    if (!context) {
+		context = new AudioContext();
+	    }
 
-            	    wavesurfer = WaveSurfer.create({
-		    container: '#waveform',
-		    audioContext: context,
-		    waveColor: 'violet',
-		    progressColor: 'purple',
-		    normalize: true,
-		    barWidth: 5,
-		    plugins: [
-			WaveSurfer.regions.create({})
-		    ]
-		});
+	    if (wavesurfer) {
+		wavesurfer.destroy();
+	    }
+	    
+            wavesurfer = WaveSurfer.create({
+		container: '#waveform',
+		audioContext: context,
+		waveColor: 'violet',
+		progressColor: 'purple',
+		normalize: true,
+		barWidth: 5,
+		plugins: [
+		    WaveSurfer.regions.create({})
+		]
+	    });
 
 	    
                 // https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
@@ -244,35 +237,49 @@ var bucketRegion = "us-east-2";
     
       function uploadToS3()
       {
-	  var key = new Date().toISOString() + '.mp3';
-	  var encoder = new Mp3LameEncoder(context.sampleRate, 160);
-	  
-	  for ( var sampleBuffer of leftchannel )
-	  {
-	      encoder.encode([sampleBuffer, sampleBuffer]);
-	  }
-	  delete leftchannel;
-	  var mp3blob = encoder.finish();
+	  $.getScript('https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js', function(data, textStatus, jqxhr) {
+	       AWS.config.update({
+                region: bucketRegion,
+                credentials: new AWS.CognitoIdentityCredentials({
+                    IdentityPoolId: IdentityPoolId
+                })
+            });
 
-	  s3.upload({
-              Key: key,
-              Body: mp3blob,
-              ACL: 'private'
-          }, function(err, data) {
-              if(err) {
-         
-              }
-	      else{
-		  alert('Successfully Uploaded!');
+            var s3 = new AWS.S3({
+                apiVersion: '2006-03-01',
+                params: {Bucket: bucketName}
+        });
+
+	      var key = new Date().toISOString() + '.mp3';
+	      var encoder = new Mp3LameEncoder(context.sampleRate, 160);
+	  
+	      for ( var sampleBuffer of leftchannel )
+	      {
+		  encoder.encode([sampleBuffer, sampleBuffer]);
 	      }
-          }).on('httpUploadProgress', function (progress) {
-	      if (progress["loaded"] && progress["total"]) {
-		  var loadedTotal = progress["loaded"];
-		  var sizeTotal = progress["total"];
-		   
-		  var progress = Math.round(loadedTotal / sizeTotal * 100);
-		  progressBar.style.width =  progress + "%";
-	      }
+	      delete leftchannel;
+	      var mp3blob = encoder.finish();
+
+	      s3.upload({
+		  Key: key,
+		  Body: mp3blob,
+		  ACL: 'private'
+              }, function(err, data) {
+		  if(err) {
+		      
+		  }
+		  else{
+		      alert('Successfully Uploaded!');
+		  }
+              }).on('httpUploadProgress', function (progress) {
+		  if (progress["loaded"] && progress["total"]) {
+		      var loadedTotal = progress["loaded"];
+		      var sizeTotal = progress["total"];
+		      
+		      var progress = Math.round(loadedTotal / sizeTotal * 100);
+		      progressBar.style.width =  progress + "%";
+		  }
+	      });
 	  });
       }
       
