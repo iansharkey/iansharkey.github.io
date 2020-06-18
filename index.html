@@ -42,6 +42,8 @@
     <button id="startRecordingButton">Start recording</button>
     <button id="stopRecordingButton">Stop recording</button>
     <button id="keepButton">Keep Region</button>
+    <button id="clearButton">Clear Region</button>
+    
     
     <button id="playButton">Play</button>
 
@@ -74,11 +76,12 @@ var bucketRegion = "us-east-2";
                 params: {Bucket: bucketName}
         });
       
-        var startRecordingButton = document.getElementById("startRecordingButton");
-        var stopRecordingButton = document.getElementById("stopRecordingButton");
-        var playButton = document.getElementById("playButton");
-        var downloadButton = document.getElementById("downloadButton");
+      var startRecordingButton = document.getElementById("startRecordingButton");
+      var stopRecordingButton = document.getElementById("stopRecordingButton");
+      var playButton = document.getElementById("playButton");
+      var downloadButton = document.getElementById("downloadButton");
       var keepButton = document.getElementById("keepButton");
+      var clearButton = document.getElementById("clearButton");
       var uploadButton = document.getElementById("uploadButton");
       var progressBar = document.getElementById("progressSpan");
       
@@ -200,6 +203,11 @@ var bucketRegion = "us-east-2";
 	    wavesurfer.playPause();
         });
 
+        clearButton.addEventListener("click", function () {
+	    wavesurfer.clearRegions();
+        });
+
+      
       function keepHighlightedRegions() {
 	  // save initial region list
 	  var initialRegionList = Object.values(wavesurfer.regions.list);
