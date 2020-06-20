@@ -84,14 +84,64 @@
       var callButton = document.getElementById("callButton");
       var peerIdInput = document.getElementById("peerIdInput");
       var audioElement = document.getElementById("localAudio");
+
+
+      function changeButtonState(state) {
+
+	  switch (state) {
+	  case "hostwaiting":
+	      startRecordingButton.disabled = false;
+	      callButton.disabled = true;
+	      uploadButton.disabled = true;
+	      playButton.disabled = true;
+	      keepButton.disabled = true;
+	      clearButton.disabled = true;
+	      stopRecordingButton.disabled = true;
+	      break;
+	  case "recording":
+	      startRecordingButton.disabled = true;
+	      callButton.disabled = true;
+	      uploadButton.disabled = true;
+	      playButton.disabled = true;
+	      keepButton.disabled = true;
+	      clearButton.disabled = true;
+	      stopRecordingButton.disabled = false;
+	      break;
+	  case "editing":
+	      startRecordingButton.disabled = false;
+	      callButton.disabled = true;
+	      uploadButton.disabled = false;
+	      playButton.disabled = false;
+	      keepButton.disabled = false;
+	      clearButton.disabled = false;
+	      stopRecordingButton.disabled = true;
+	      break
+	  case "guestwaiting":
+	      startRecordingButton.disabled = false;
+	      callButton.disabled = true;
+	      uploadButton.disabled = true;
+	      playButton.disabled = true;
+	      keepButton.disabled = true;
+	      clearButton.disabled = true;
+	      stopRecordingButton.disabled = true;
+	      break;
+	  case "guestrecording":
+	      startRecordingButton.disabled = true;
+	      callButton.disabled = false;
+	      uploadButton.disabled = true;
+	      playButton.disabled = true;
+	      keepButton.disabled = true;
+	      clearButton.disabled = true;
+	      stopRecordingButton.disabled = false;
+	      break;
+	  }
+      }
       
-      startRecordingButton.disabled = false;
-      callButton.disabled = true;
-      uploadButton.disabled = true;
-      playButton.disabled = true;
-      keepButton.disabled = true;
-      clearButton.disabled = true;
-      stopRecordingButton.disabled = true;
+
+      var urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has("peerid")) {
+	  changeButtonState('guestwaiting');
+      }
       
       keepButton.addEventListener("click", keepHighlightedRegions);
       uploadButton.addEventListener("click", uploadToS3);
@@ -117,7 +167,7 @@
       
       peer.on('open', function(id) {
           myId = id;
-          peerDisplay.innerHTML = myId;
+          peerDisplay.innerHTML = 'http://iansharkey.github.io/?peerid=' + myId;
       });
 
       function handleCallStream(stream) {
@@ -150,15 +200,16 @@
       peer.on('error', function(err) {
           console.log(err);
       });
+
+      changeButtonState('hostwaiting');
       
       startRecordingButton.addEventListener("click", function () {
-	  callButton.disabled = true;
-	  uploadButton.disabled = true;
-	  playButton.disabled = true;
-	  keepButton.disabled = true;
-	  clearButton.disabled = true;
-	  stopRecordingButton.disabled = true;
-
+	  if (urlParams.has("peerid")) {
+	      changeButtonState('guestrecording');
+	  }
+	  else {
+	      changeButtonState('recording');
+	  }
 	  
           // Initialize recorder
           leftchannel = [];
@@ -230,9 +281,6 @@
                   gumStream = e;
                   mediaStream.connect(gain);
                   recorder.connect(context.destination);
-		  stopRecordingButton.disabled = false;
-		  startRecordingButton.disabled = true;
-		  callButton.disabled = false;
 
               },
               function (e) {
@@ -262,15 +310,7 @@
           gumStream.getAudioTracks()[0].stop();           
 
           encode(leftchannel);
-	  keepButton.disabled = false;
-	  clearButton.disabled = false;
-	  playButton.disabled = false;
-	  uploadButton.disabled = false;
-	  callButton.disabled = true;
-	  stopRecordingButton.disabled = true;
-	  startRecordingButton.disabled = false;
-
-	   // TODO: change this to a state machine
+	  changeButtonState("editing");
       });
 
       playButton.addEventListener("click", function () {
