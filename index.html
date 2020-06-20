@@ -106,6 +106,7 @@ var bucketRegion = "us-east-2";
       var peer = new Peer();
       var myId;
       var gain;
+      var highpassFilter;
       
       peer.on('open', function(id) {
 	  myId = id;
@@ -180,10 +181,15 @@ var bucketRegion = "us-east-2";
 
                 // we connect the recorder
 		
-		gain = context.createGain();
+	    gain = context.createGain();
+	    highpassFilter = context.createBiquadFilter();
+	    highpassFilter.type = "highpass";
+	    highpassFilter.frequency = 10000;
 		//gain.gain.setValueAtTime(1.0, context.currentTime);
 
-                gain.connect(recorder);
+            
+	    gain.connect(highpassFilter);
+	    highpassFilter.connect(recorder);
 
 
 
