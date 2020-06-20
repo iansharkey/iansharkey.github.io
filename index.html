@@ -118,14 +118,16 @@ var bucketRegion = "us-east-2";
       peer.on('call', function(call) {
 	  console.log("received call");
 	  call.answer(gumStream);
+
+	  call.on('stream', function(stream) {
+	      console.log('got stream');
+	      var mediaStream = context.createMediaStreamSource(stream);
+	      mediaStream.connect(gain);
+	      console.log('connected to gain node');
+	  });
+
       });
 
-      peer.on('stream', function(stream) {
-	  console.log('got stream');
-	  var mediaStream = context.createMediaStreamSource(stream);
-	  mediaStream.connect(gain);
-	  console.log('connected to gain node');
-      });
 
       peer.on('error', function(err) {
 	  console.log(err);
