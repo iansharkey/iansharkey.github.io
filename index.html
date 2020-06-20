@@ -85,6 +85,13 @@
       var peerIdInput = document.getElementById("peerIdInput");
       var audioElement = document.getElementById("localAudio");
       
+      startRecordingButton.disabled = false;
+      callButton.disabled = true;
+      uploadButton.disabled = true;
+      playButton.disabled = true;
+      keepButton.disabled = true;
+      clearButton.disabled = true;
+      stopRecordingButton.disabled = true;
       
       keepButton.addEventListener("click", keepHighlightedRegions);
       uploadButton.addEventListener("click", uploadToS3);
@@ -145,6 +152,14 @@
       });
       
       startRecordingButton.addEventListener("click", function () {
+	  callButton.disabled = true;
+	  uploadButton.disabled = true;
+	  playButton.disabled = true;
+	  keepButton.disabled = true;
+	  clearButton.disabled = true;
+	  stopRecordingButton.disabled = true;
+
+	  
           // Initialize recorder
           leftchannel = [];
           rightchannel = [];
@@ -188,7 +203,7 @@
           //gain.gain.setValueAtTime(1.0, context.currentTime);
 
           
-          highpassFilter.connect(gain);
+          //highpassFilter.connect(gain);
           gain.connect(recorder);
 
 
@@ -213,8 +228,11 @@
                   mediaStream = context.createMediaStreamSource(e);
 
                   gumStream = e;
-                  mediaStream.connect(highpassFilter);
+                  mediaStream.connect(gain);
                   recorder.connect(context.destination);
+		  stopRecordingButton.disabled = false;
+		  startRecordingButton.disabled = true;
+		  callButton.disabled = false;
 
               },
               function (e) {
@@ -244,6 +262,15 @@
           gumStream.getAudioTracks()[0].stop();           
 
           encode(leftchannel);
+	  keepButton.disabled = false;
+	  clearButton.disabled = false;
+	  playButton.disabled = false;
+	  uploadButton.disabled = false;
+	  callButton.disabled = true;
+	  stopRecordingButton.disabled = true;
+	  startRecordingButton.disabled = false;
+
+	   // TODO: change this to a state machine
       });
 
       playButton.addEventListener("click", function () {
