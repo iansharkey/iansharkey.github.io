@@ -115,6 +115,7 @@ var bucketRegion = "us-east-2";
       });
 
       peer.on('call', function(call) {
+	  console.log("received call");
 	  call.answer(gumStream);
       });
 
