@@ -102,6 +102,7 @@ var bucketRegion = "us-east-2";
       var numberOfOutputChannels = 1;
       var peer = new Peer();
       var myId;
+      var gain;
       
       peer.on('open', function(id) {
 	  myId = id;
@@ -167,7 +168,7 @@ var bucketRegion = "us-east-2";
 
                 // we connect the recorder
 		
-		var gain = context.createGain();
+		gain = context.createGain();
 		//gain.gain.setValueAtTime(1.0, context.currentTime);
 
                 gain.connect(recorder);
