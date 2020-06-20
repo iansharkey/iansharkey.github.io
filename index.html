@@ -48,7 +48,7 @@
 
     <button id="uploadButton">Upload to S3</button>    
     <button id="callButton">Call Peer</button>
-    <input id="peerIdInput" type="text"></input>
+    <input id="peerIdInput" type="text" readonly></input>
 
     <div id="myPeerId"></div>
     
@@ -137,10 +137,16 @@
 	  }
       }
       
-
       var urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has("peerid")) {
+      var isHost = !urlParams.has("peerid");
+      var hostId;
+
+      if (!isHost) {
+	  hostId = urlParams.get('peerid');
 	  changeButtonState('guestwaiting');
+	  peerIdInput.value = hostId;
+	  peerDisplay.hidden = true;
+	  
       }
       
       keepButton.addEventListener("click", keepHighlightedRegions);
@@ -204,11 +210,11 @@
       changeButtonState('hostwaiting');
       
       startRecordingButton.addEventListener("click", function () {
-	  if (urlParams.has("peerid")) {
-	      changeButtonState('guestrecording');
+	  if (isHost) {
+	      changeButtonState('recording');
 	  }
 	  else {
-	      changeButtonState('recording');
+	      changeButtonState('guestrecording');
 	  }
 	  
           // Initialize recorder
