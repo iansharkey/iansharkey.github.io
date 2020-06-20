@@ -129,6 +129,7 @@ var bucketRegion = "us-east-2";
 	      mediaStream.connect(gain);
 	      console.log('connected to gain node');
 	      audioElement.srcObject = stream;
+	      audioElement.play();
 	      
 	  });
 
