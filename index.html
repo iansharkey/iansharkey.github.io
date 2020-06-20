@@ -8,6 +8,7 @@
     <script src="lib/Mp3LameEncoder.js"></script>
     <script src="https://unpkg.com/wavesurfer.js"></script>
     <script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.regions.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 
 
@@ -46,6 +47,11 @@
     <button id="playButton">Play</button>
 
     <button id="uploadButton">Upload to S3</button>    
+    <button id="callButton">Call Peer</button>
+    <input id="peerIdInput" type="text"></input>
+
+    <div id="myPeerId"></div>
+    
     <div id='waveform'></div>
 
     <div class="wrapper">
@@ -71,6 +77,11 @@ var bucketRegion = "us-east-2";
       var clearButton = document.getElementById("clearButton");
       var uploadButton = document.getElementById("uploadButton");
       var progressBar = document.getElementById("progressSpan");
+      var peerDisplay = document.getElementById("myPeerId");
+      var peerCallId = document.getElementById("peerCallId");
+      var callButton = document.getElementById("callButton");
+      var peerIdInput = document.getElementById("peerIdInput");
+      
       
       keepButton.addEventListener("click", keepHighlightedRegions);
       uploadButton.addEventListener("click", uploadToS3);
@@ -89,9 +100,28 @@ var bucketRegion = "us-east-2";
       var bufferSize = 2048;
       var numberOfInputChannels = 1;
       var numberOfOutputChannels = 1;
+      var peer = new Peer();
+      var myId;
+      
+      peer.on('open', function(id) {
+	  myId = id;
+	  peerDisplay.innerHTML = myId;
+      });
 
-      
-      
+      callButton.addEventListener("click", function() {
+	  var peerId = peerIdInput.value;
+	  peer.call(peerId, gumStream);
+
+      });
+
+      peer.on('call', function(call) {
+	  call.answer(gumStream);
+      });
+
+      peer.on('error', function(err) {
+	  console.log(err);
+      });
+    
         startRecordingButton.addEventListener("click", function () {
             // Initialize recorder
 	    leftchannel = [];
@@ -143,6 +173,8 @@ var bucketRegion = "us-east-2";
                     recordingLength += e.inputBuffer.getChannelData(0).length;
                 }
 
+
+	    
 	    
             navigator.mediaDevices.getUserMedia( {
                 audio: true
