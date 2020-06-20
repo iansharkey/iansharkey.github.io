@@ -59,7 +59,9 @@
 	<span id="progressSpan" class="progress-bar-fill" style="width: 0%;"></span>
       </div>
     </div>
-    
+
+
+    <audio id="localAudio" autoplay playsinline controls="false"/>
     
     <script>
 
@@ -81,6 +83,7 @@ var bucketRegion = "us-east-2";
       var peerCallId = document.getElementById("peerCallId");
       var callButton = document.getElementById("callButton");
       var peerIdInput = document.getElementById("peerIdInput");
+      var audioElement = document.getElementById("localAudio");
       
       
       keepButton.addEventListener("click", keepHighlightedRegions);
@@ -125,6 +128,8 @@ var bucketRegion = "us-east-2";
 	      var mediaStream = context.createMediaStreamSource(stream);
 	      mediaStream.connect(gain);
 	      console.log('connected to gain node');
+	      audioElement.srcObject = stream;
+	      
 	  });
 
       });
