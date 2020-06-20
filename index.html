@@ -121,6 +121,7 @@ var bucketRegion = "us-east-2";
 
 	  call.on('stream', function(stream) {
 	      console.log('got stream');
+	      stream.getAudioTracks()[0].enabled = true;
 	      var mediaStream = context.createMediaStreamSource(stream);
 	      mediaStream.connect(gain);
 	      console.log('connected to gain node');
