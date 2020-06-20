@@ -112,17 +112,7 @@ var bucketRegion = "us-east-2";
 	  peerDisplay.innerHTML = myId;
       });
 
-      callButton.addEventListener("click", function() {
-	  var peerId = peerIdInput.value;
-	  peer.call(peerId, gumStream);
-
-      });
-
-      peer.on('call', function(call) {
-	  console.log("received call");
-	  call.answer(gumStream);
-
-	  call.on('stream', function(stream) {
+      function handleCallStream(stream) {
 	      console.log('got stream');
 	      stream.getAudioTracks()[0].enabled = true;
 	      var mediaStream = context.createMediaStreamSource(stream);
@@ -133,6 +123,19 @@ var bucketRegion = "us-east-2";
 	      
 	  });
 
+      
+      callButton.addEventListener("click", function() {
+	  var peerId = peerIdInput.value;
+	  var call = peer.call(peerId, gumStream);
+
+	  call.on('stream', handleCallStream);
+      });
+
+      peer.on('call', function(call) {
+	  console.log("received call");
+	  call.answer(gumStream);
+
+	  call.on('stream', handleCallStream);
       });
 
 
