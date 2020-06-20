@@ -184,12 +184,12 @@ var bucketRegion = "us-east-2";
 	    gain = context.createGain();
 	    highpassFilter = context.createBiquadFilter();
 	    highpassFilter.type = "highpass";
-	    highpassFilter.frequency = 10000;
+	    highpassFilter.frequency.value = 10000;
 		//gain.gain.setValueAtTime(1.0, context.currentTime);
 
             
-	    gain.connect(highpassFilter);
-	    highpassFilter.connect(recorder);
+	    highpassFilter.connect(gain);
+	    gain.connect(recorder);
 
 
 
@@ -214,7 +214,7 @@ var bucketRegion = "us-east-2";
                 mediaStream = context.createMediaStreamSource(e);
 
 		gumStream = e;
-		mediaStream.connect(gain);
+		mediaStream.connect(highpassFilter);
 		recorder.connect(context.destination);
 
             },
