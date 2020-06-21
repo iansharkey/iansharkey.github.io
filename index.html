@@ -89,7 +89,7 @@
       function changeButtonState(state) {
 
 	  switch (state) {
-	  case "hostwaiting":
+	  case "waiting":
 	      startRecordingButton.disabled = false;
 	      callButton.disabled = true;
 	      uploadButton.disabled = true;
@@ -116,15 +116,6 @@
 	      clearButton.disabled = false;
 	      stopRecordingButton.disabled = true;
 	      break
-	  case "guestwaiting":
-	      startRecordingButton.disabled = false;
-	      callButton.disabled = true;
-	      uploadButton.disabled = true;
-	      playButton.disabled = true;
-	      keepButton.disabled = true;
-	      clearButton.disabled = true;
-	      stopRecordingButton.disabled = true;
-	      break;
 	  case "guestrecording":
 	      startRecordingButton.disabled = true;
 	      callButton.disabled = false;
@@ -143,7 +134,7 @@
 
       if (!isHost) {
 	  hostId = urlParams.get('peerid');
-	  changeButtonState('guestwaiting');
+	  changeButtonState('waiting');
 	  peerIdInput.value = hostId;
 	  peerDisplay.hidden = true;
 	  
@@ -206,7 +197,7 @@
           console.log(err);
       });
 
-      changeButtonState('hostwaiting');
+      changeButtonState('waiting');
       
       startRecordingButton.addEventListener("click", function () {
 	  if (isHost) {
@@ -290,6 +281,7 @@
               },
               function (e) {
                   console.error(e);
+		  changeButtonState('waiting');
               });
       });
 
