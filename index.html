@@ -202,6 +202,10 @@
       changeButtonState('waiting');
       
       startRecordingButton.addEventListener("click", function () {
+	  if (wavesurfer) {
+              wavesurfer.destroy();
+          }
+
 	  if (isHost) {
 	      changeButtonState('recording');
 	  }
@@ -212,28 +216,12 @@
           // Initialize recorder
           leftchannel = [];
 
-          window.AudioContext = window.AudioContext || window.webkitAudioContext;
           if (!context) {
+              window.AudioContext = window.AudioContext || window.webkitAudioContext;
               context = new AudioContext();
           }
 
-          if (wavesurfer) {
-              wavesurfer.destroy();
-          }
-          
-          wavesurfer = WaveSurfer.create({
-              container: '#waveform',
-              audioContext: context,
-              waveColor: 'violet',
-              progressColor: 'purple',
-              normalize: true,
-              barWidth: 5,
-              plugins: [
-                  WaveSurfer.regions.create({})
-              ]
-          });
-
-          
+       
           // https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
           // bufferSize: the onaudioprocess event is called when the buffer is full
           if (context.createScriptProcessor) {
@@ -288,10 +276,7 @@
           }
           blob = encoder.finish();
 
-          wavesurfer.empty();
-          wavesurfer.clearRegions();
-          wavesurfer.loadBlob(blob);
-          wavesurfer.enableDragSelection({});
+	  return blob;
       }
       
       stopRecordingButton.addEventListener("click", function () {
@@ -302,7 +287,25 @@
 
 	  activeCalls.forEach(call => call.close());
 
-          encode(leftchannel);
+	  wavesurfer = WaveSurfer.create({
+              container: '#waveform',
+              audioContext: context,
+              waveColor: 'violet',
+              progressColor: 'purple',
+              normalize: true,
+              barWidth: 5,
+              plugins: [
+                  WaveSurfer.regions.create({})
+              ]
+          });
+
+
+          var blob = encode(leftchannel);
+	  wavesurfer.empty();
+          wavesurfer.clearRegions();
+          wavesurfer.loadBlob(blob);
+          wavesurfer.enableDragSelection({});
+
 	  changeButtonState("editing");
       });
 
@@ -350,7 +353,12 @@
           }
           leftchannel = newLeft;
           
-          encode(leftchannel);
+          var blob = encode(leftchannel);
+
+	  wavesurfer.empty();
+          wavesurfer.clearRegions();
+          wavesurfer.loadBlob(blob);
+          wavesurfer.enableDragSelection({});	  
       }
       
       function uploadToS3()
