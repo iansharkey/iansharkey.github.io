@@ -67,9 +67,7 @@
 
       var bucketName = "personalpodcast";
       var bucketRegion = "us-east-2";
-
       var IdentityPoolId = "us-east-2:dc78fe1b-579b-440e-9057-1899ee68c94e";
-      
       
       var startRecordingButton = document.getElementById("startRecordingButton");
       var stopRecordingButton = document.getElementById("stopRecordingButton");
@@ -85,6 +83,27 @@
       var peerIdInput = document.getElementById("peerIdInput");
       var audioElement = document.getElementById("localAudio");
 
+      var wavesurfer;
+
+      var leftchannel = [];
+      var mediaStream = null;
+      var context = null;
+      var blob = null;
+      var gumStream = null;
+      var bufferSize = 2048;
+      var numberOfInputChannels = 1;
+      var numberOfOutputChannels = 1;
+      var recorder = null;
+      var gain;
+      var highpassFilter;
+
+      var activeCalls = [];
+      var myId;
+      var hostId;
+      var peer = new Peer();
+      
+      var urlParams = new URLSearchParams(window.location.search);
+      var isHost = !urlParams.has("peerid");
 
       function changeButtonState(state) {
 
@@ -128,9 +147,6 @@
 	  }
       }
       
-      var urlParams = new URLSearchParams(window.location.search);
-      var isHost = !urlParams.has("peerid");
-      var hostId;
 
       if (!isHost) {
 	  hostId = urlParams.get('peerid');
@@ -143,26 +159,6 @@
       keepButton.addEventListener("click", keepHighlightedRegions);
       uploadButton.addEventListener("click", uploadToS3);
 
-
-      var leftchannel = [];
-      var rightchannel = [];
-      var recorder = null;
-      var recordingLength = 0;
-      var volume = null;
-      var mediaStream = null;
-      var context = null;
-      var blob = null;
-      var gumStream = null;
-      var wavesurfer;
-      var bufferSize = 2048;
-      var numberOfInputChannels = 1;
-      var numberOfOutputChannels = 1;
-      var peer = new Peer();
-      var myId;
-      var gain;
-      var highpassFilter;
-      var outgoingCall;
-      var incomingCalls = [];
       
       peer.on('open', function(id) {
           myId = id;
@@ -182,14 +178,15 @@
       
       callButton.addEventListener("click", function() {
           var peerId = peerIdInput.value;
-          outgoingCall = peer.call(peerId, gumStream);
+          var outgoingCall = peer.call(peerId, gumStream);
+	  activeCalls.push(outgoingCall);
 
           outgoingCall.on('stream', handleCallStream);
       });
 
       peer.on('call', function(call) {
           console.log("received call");
-	  incomingCalls.push(call);
+	  activeCalls.push(call);
           call.answer(gumStream);
 
           call.on('stream', handleCallStream);
@@ -212,7 +209,6 @@
 	  
           // Initialize recorder
           leftchannel = [];
-          rightchannel = [];
 
           window.AudioContext = window.AudioContext || window.webkitAudioContext;
           if (!context) {
@@ -261,7 +257,6 @@
           
           recorder.onaudioprocess = function (e) {
               leftchannel.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-              recordingLength += e.inputBuffer.getChannelData(0).length;
           }
 
 
@@ -309,8 +304,7 @@
           mediaStream.disconnect();
           gumStream.getAudioTracks()[0].stop();
 
-	  outgoingCall.close()
-	  incomingCalls.forEach(call => call.close());
+	  activeCalls.forEach(call => call.close());
 
           encode(leftchannel);
 	  changeButtonState("editing");
