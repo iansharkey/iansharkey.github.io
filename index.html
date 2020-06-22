@@ -252,30 +252,20 @@
           //highpassFilter.connect(gain);
           gain.connect(recorder);
 
-
-
-          
           recorder.onaudioprocess = function (e) {
               leftchannel.push(new Float32Array(e.inputBuffer.getChannelData(0)));
           }
-
-
-          
           
           navigator.mediaDevices.getUserMedia( {
               audio: true
           }).then(
               function (e) {
-
-                  // creates the audio context
-
                   // creates an audio node from the microphone incoming stream
                   mediaStream = context.createMediaStreamSource(e);
 
                   gumStream = e;
                   mediaStream.connect(gain);
                   recorder.connect(context.destination);
-
               },
               function (e) {
                   console.error(e);
@@ -298,7 +288,6 @@
       }
       
       stopRecordingButton.addEventListener("click", function () {
-
           // stop recording
           recorder.disconnect();
           mediaStream.disconnect();
