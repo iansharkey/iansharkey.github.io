@@ -105,6 +105,8 @@
       var urlParams = new URLSearchParams(window.location.search);
       var isHost = !urlParams.has("peerid");
 
+      var timestamp = isHost ? 0x10000 : 0;
+
       function changeButtonState(state) {
 
 	  switch (state) {
@@ -253,7 +255,10 @@
           gain.connect(recorder);
 
           recorder.onaudioprocess = function (e) {
-              leftchannel.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+	      timestamp += 1;
+              leftchannel.push({timestamp: timestamp,
+				samples: new Float32Array(e.inputBuffer.getChannelData(0))
+			       });
           }
           
           navigator.mediaDevices.getUserMedia( {
@@ -276,7 +281,9 @@
 
       function encode(left) {
           var encoder = new WavAudioEncoder(context.sampleRate, 2);
-          for (var sampleBuffer of left) {
+          for (var sampleStruct of left) {
+	      var sampleBuffer = sampleStruct.samples;
+	      
               encoder.encode([sampleBuffer, sampleBuffer]);
           }
           blob = encoder.finish();
