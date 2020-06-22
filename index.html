@@ -161,6 +161,8 @@
       var myId;
       var gain;
       var highpassFilter;
+      var outgoingCall;
+      var incomingCalls = [];
       
       peer.on('open', function(id) {
           myId = id;
@@ -180,13 +182,14 @@
       
       callButton.addEventListener("click", function() {
           var peerId = peerIdInput.value;
-          var call = peer.call(peerId, gumStream);
+          outgoingCall = peer.call(peerId, gumStream);
 
-          call.on('stream', handleCallStream);
+          outgoingCall.on('stream', handleCallStream);
       });
 
       peer.on('call', function(call) {
           console.log("received call");
+	  incomingCalls.push(call);
           call.answer(gumStream);
 
           call.on('stream', handleCallStream);
@@ -304,7 +307,10 @@
           // stop recording
           recorder.disconnect();
           mediaStream.disconnect();
-          gumStream.getAudioTracks()[0].stop();           
+          gumStream.getAudioTracks()[0].stop();
+
+	  outgoingCall.close()
+	  incomingCalls.forEach(call => call.close());
 
           encode(leftchannel);
 	  changeButtonState("editing");
