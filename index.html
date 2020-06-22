@@ -255,7 +255,7 @@
           gain.connect(recorder);
 
           recorder.onaudioprocess = function (e) {
-	      timestamp += 1;
+	      timestamp++;
               leftchannel.push({timestamp: timestamp,
 				samples: new Float32Array(e.inputBuffer.getChannelData(0))
 			       });
