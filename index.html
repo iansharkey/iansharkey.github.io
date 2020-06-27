@@ -106,7 +106,13 @@
       var isHost = !urlParams.has("peerid");
 
       var timestamp = isHost ? 0x10000 : 0;
+      var interval;
 
+
+      function updateTimestamp(remoteTimestamp) {
+	  timestamp = Math.max(timestamp, remoteTimestamp) + 1;
+      }
+      
       function changeButtonState(state) {
 
 	  switch (state) {
@@ -157,15 +163,13 @@
 	  peerDisplay.hidden = true;
 	  
       }
+
+      var activeIntervals = [];
+      var activeConnections = [];
       
       keepButton.addEventListener("click", keepHighlightedRegions);
       uploadButton.addEventListener("click", uploadToS3);
-
       
-      peer.on('open', function(id) {
-          myId = id;
-          peerDisplay.innerText = 'https://iansharkey.github.io/?peerid=' + myId;
-      });
 
       function handleCallStream(stream) {
           console.log('got stream');
@@ -178,14 +182,40 @@
       }
 
       
+      
       callButton.addEventListener("click", function() {
           var peerId = peerIdInput.value;
           var outgoingCall = peer.call(peerId, gumStream);
+	  outgoingCall.on('stream', handleCallStream);
 	  activeCalls.push(outgoingCall);
 
-          outgoingCall.on('stream', handleCallStream);
+	  var outgoingConnection = peer.connect(peerId);
+
+	  // update the lamport timestamp
+	  outgoingConnection.on('data', updateTimestamp);
+
+	  activeConnections.push(outgoingConnection);
+
+	  var interval = setInterval(()=> outgoingConnection.send(timestamp), 1000);
+	  activeIntervals.push(interval);
       });
 
+      peer.on('connection', function(connection) {
+	  activeConnections.push(connection);
+
+	  connect.on('data', updateTimestamp);
+
+	  var interval = setInterval(() => connection.send(timestamp), 1000);
+	  activeIntervals.push(interval);
+      });
+
+
+      
+      peer.on('open', function(id) {
+          myId = id;
+          peerDisplay.innerText = 'https://iansharkey.github.io/?peerid=' + myId;
+      });
+    
       peer.on('call', function(call) {
           console.log("received call");
 	  activeCalls.push(call);
@@ -194,7 +224,6 @@
           call.on('stream', handleCallStream);
       });
 
-
       peer.on('error', function(err) {
           console.log(err);
       });
@@ -202,6 +231,8 @@
       changeButtonState('waiting');
       
       startRecordingButton.addEventListener("click", function () {
+	  setInterval(function() { console.log('gothere ' + timestamp); }, 5000 );
+	  
 	  if (wavesurfer) {
               wavesurfer.destroy();
           }
