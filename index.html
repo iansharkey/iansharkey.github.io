@@ -8,7 +8,7 @@
     <script src="lib/Mp3LameEncoder.js"></script>
     <script src="https://unpkg.com/wavesurfer.js@3.3.3"></script>
     <script src="https://unpkg.com/wavesurfer.js@3.3.3/dist/plugin/wavesurfer.regions.js"></script>
-    <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.0/dist/peerjs.min.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 
 
@@ -183,7 +183,7 @@
 
       
       
-      callButton.addEventListener("click", function() {
+      callButton.addEventListener("click", () => {
           var peerId = peerIdInput.value;
           var outgoingCall = peer.call(peerId, gumStream);
 	  outgoingCall.on('stream', handleCallStream);
@@ -200,7 +200,7 @@
 	  activeIntervals.push(interval);
       });
 
-      peer.on('connection', function(connection) {
+      peer.on('connection', connection => {
 	  activeConnections.push(connection);
 
 	  connect.on('data', updateTimestamp);
@@ -211,12 +211,12 @@
 
 
       
-      peer.on('open', function(id) {
+      peer.on('open', id => {
           myId = id;
           peerDisplay.innerText = 'https://iansharkey.github.io/?peerid=' + myId;
       });
     
-      peer.on('call', function(call) {
+      peer.on('call', call => {
           console.log("received call");
 	  activeCalls.push(call);
           call.answer(gumStream);
@@ -224,14 +224,13 @@
           call.on('stream', handleCallStream);
       });
 
-      peer.on('error', function(err) {
-          console.log(err);
-      });
+      peer.on('error', err => console.log(err));
+
 
       changeButtonState('waiting');
       
-      startRecordingButton.addEventListener("click", function () {
-	  setInterval(function() { console.log('gothere ' + timestamp); }, 5000 );
+      startRecordingButton.addEventListener("click",  () => {
+	  setInterval(() => console.log('gothere ' + timestamp), 5000 );
 	  
 	  if (wavesurfer) {
               wavesurfer.destroy();
@@ -273,7 +272,7 @@
           //highpassFilter.connect(gain);
           gain.connect(recorder);
 
-          recorder.onaudioprocess = function (e) {
+          recorder.onaudioprocess = (e) => {
 	      timestamp++;
               leftchannel.push({timestamp: timestamp,
 				samples: new Float32Array(e.inputBuffer.getChannelData(0))
@@ -282,8 +281,7 @@
           
           navigator.mediaDevices.getUserMedia( {
               audio: true
-          }).then(
-              function (e) {
+          }).then(e => {
                   // creates an audio node from the microphone incoming stream
                   mediaStream = context.createMediaStreamSource(e);
 
@@ -291,8 +289,8 @@
                   mediaStream.connect(gain);
                   recorder.connect(context.destination);
               },
-              function (e) {
-                  console.error(e);
+              err => {
+                  console.error(err);
 		  changeButtonState('waiting');
               });
       });
@@ -310,7 +308,7 @@
 	  return blob;
       }
       
-      stopRecordingButton.addEventListener("click", function () {
+      stopRecordingButton.addEventListener("click",  () => {
           // stop recording
           recorder.disconnect();
           mediaStream.disconnect();
@@ -340,7 +338,7 @@
 	  changeButtonState("editing");
       });
 
-      playButton.addEventListener("click", function () {
+      playButton.addEventListener("click", () => {
           if (blob == null) {
               return;
           }
@@ -348,9 +346,8 @@
           wavesurfer.playPause();
       });
 
-      clearButton.addEventListener("click", function () {
-          wavesurfer.clearRegions();
-      });
+      clearButton.addEventListener("click",  () => wavesurfer.clearRegions());
+
 
       
       function keepHighlightedRegions() {
@@ -394,7 +391,7 @@
       
       function uploadToS3()
       {
-          $.getScript('https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js', function(data, textStatus, jqxhr) {
+          $.getScript('https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js', (data, textStatus, jqxhr) => {
               AWS.config.update({
                   region: bucketRegion,
                   credentials: new AWS.CognitoIdentityCredentials({
@@ -421,14 +418,14 @@
                   Key: key,
                   Body: mp3blob,
                   ACL: 'private'
-              }, function(err, data) {
+              }, (err, data) => {
                   if(err) {
                       
                   }
                   else{
                       //alert('Successfully Uploaded!');
                   }
-              }).on('httpUploadProgress', function (progress) {
+              }).on('httpUploadProgress', (progress) => {
                   if (progress["loaded"] && progress["total"]) {
                       var loadedTotal = progress["loaded"];
                       var sizeTotal = progress["total"];
