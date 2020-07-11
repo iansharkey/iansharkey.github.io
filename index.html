@@ -100,7 +100,15 @@
       var activeCalls = [];
       var myId;
       var hostId;
-      var peer = new Peer();
+
+      var host = "9000-e8383837-1198-43cc-b605-42596580d0a8.ws-us02.gitpod.io"; 
+      var config = {
+	  host: host,
+	  secure: true,
+
+      };
+      
+      var peer = new Peer(undefined, config);
       
       var urlParams = new URLSearchParams(window.location.search);
       var isHost = !urlParams.has("peerid");
@@ -213,7 +221,7 @@
       
       peer.on('open', id => {
           myId = id;
-          peerDisplay.innerText = 'https://iansharkey.github.io/?peerid=' + myId;
+          peerDisplay.innerText = 'https://' + host + '/?peerid=' + myId;
       });
     
       peer.on('call', call => {
