@@ -415,8 +415,9 @@
               var key = new Date().toISOString() + '.mp3';
               var encoder = new Mp3LameEncoder(context.sampleRate, 160);
               
-              for ( var sampleBuffer of leftchannel )
+              for ( var sampleStruct of leftchannel )
               {
+		  var sampleBuffer = sampleStruct.samples;
                   encoder.encode([sampleBuffer, sampleBuffer]);
               }
 
