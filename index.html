@@ -238,8 +238,6 @@
       changeButtonState('waiting');
       
       startRecordingButton.addEventListener("click",  () => {
-          setInterval(() => console.log('gothere ' + timestamp), 5000 );
-
           progressBar.style.width = "0%;"
           
           if (wavesurfer) {
