@@ -418,7 +418,7 @@
               var encoder = new Mp3LameEncoder(context.sampleRate, 160);
 
 	      progressBar.style.backgroundColor = "#34ff66";
-	      leftchannel.forEach( (value, index) => {
+	      leftchannel.forEach( (sampleStruct, index) => {
 		  var sampleBuffer = sampleStruct.samples;
                   encoder.encode([sampleBuffer, sampleBuffer]);
 		  var progress = Math.round( index / leftchannel.length * 100);
