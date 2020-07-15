@@ -103,8 +103,8 @@
 
       var host = "9000-e8383837-1198-43cc-b605-42596580d0a8.ws-us02.gitpod.io"; 
       var config = {
-	  host: host,
-	  secure: true,
+          host: host,
+          secure: true,
 
       };
       
@@ -118,58 +118,58 @@
 
 
       function updateTimestamp(remoteTimestamp) {
-	  timestamp = Math.max(timestamp, remoteTimestamp) + 1;
+          timestamp = Math.max(timestamp, remoteTimestamp) + 1;
       }
       
       function changeButtonState(state) {
 
-	  switch (state) {
-	  case "waiting":
-	      startRecordingButton.disabled = false;
-	      callButton.disabled = true;
-	      uploadButton.disabled = true;
-	      playButton.disabled = true;
-	      keepButton.disabled = true;
-	      clearButton.disabled = true;
-	      stopRecordingButton.disabled = true;
-	      break;
-	  case "recording":
-	      startRecordingButton.disabled = true;
-	      callButton.disabled = true;
-	      uploadButton.disabled = true;
-	      playButton.disabled = true;
-	      keepButton.disabled = true;
-	      clearButton.disabled = true;
-	      stopRecordingButton.disabled = false;
-	      break;
-	  case "editing":
-	      startRecordingButton.disabled = false;
-	      callButton.disabled = true;
-	      uploadButton.disabled = false;
-	      playButton.disabled = false;
-	      keepButton.disabled = false;
-	      clearButton.disabled = false;
-	      stopRecordingButton.disabled = true;
-	      break
-	  case "guestrecording":
-	      startRecordingButton.disabled = true;
-	      callButton.disabled = false;
-	      uploadButton.disabled = true;
-	      playButton.disabled = true;
-	      keepButton.disabled = true;
-	      clearButton.disabled = true;
-	      stopRecordingButton.disabled = false;
-	      break;
-	  }
+          switch (state) {
+          case "waiting":
+              startRecordingButton.disabled = false;
+              callButton.disabled = true;
+              uploadButton.disabled = true;
+              playButton.disabled = true;
+              keepButton.disabled = true;
+              clearButton.disabled = true;
+              stopRecordingButton.disabled = true;
+              break;
+          case "recording":
+              startRecordingButton.disabled = true;
+              callButton.disabled = true;
+              uploadButton.disabled = true;
+              playButton.disabled = true;
+              keepButton.disabled = true;
+              clearButton.disabled = true;
+              stopRecordingButton.disabled = false;
+              break;
+          case "editing":
+              startRecordingButton.disabled = false;
+              callButton.disabled = true;
+              uploadButton.disabled = false;
+              playButton.disabled = false;
+              keepButton.disabled = false;
+              clearButton.disabled = false;
+              stopRecordingButton.disabled = true;
+              break
+          case "guestrecording":
+              startRecordingButton.disabled = true;
+              callButton.disabled = false;
+              uploadButton.disabled = true;
+              playButton.disabled = true;
+              keepButton.disabled = true;
+              clearButton.disabled = true;
+              stopRecordingButton.disabled = false;
+              break;
+          }
       }
       
 
       if (!isHost) {
-	  hostId = urlParams.get('peerid');
-	  changeButtonState('waiting');
-	  peerIdInput.value = hostId;
-	  peerDisplay.hidden = true;
-	  
+          hostId = urlParams.get('peerid');
+          changeButtonState('waiting');
+          peerIdInput.value = hostId;
+          peerDisplay.hidden = true;
+          
       }
 
       var activeIntervals = [];
@@ -194,27 +194,27 @@
       callButton.addEventListener("click", () => {
           var peerId = peerIdInput.value;
           var outgoingCall = peer.call(peerId, gumStream);
-	  outgoingCall.on('stream', handleCallStream);
-	  activeCalls.push(outgoingCall);
+          outgoingCall.on('stream', handleCallStream);
+          activeCalls.push(outgoingCall);
 
-	  var outgoingConnection = peer.connect(peerId);
+          var outgoingConnection = peer.connect(peerId);
 
-	  // update the lamport timestamp
-	  outgoingConnection.on('data', updateTimestamp);
+          // update the lamport timestamp
+          outgoingConnection.on('data', updateTimestamp);
 
-	  activeConnections.push(outgoingConnection);
+          activeConnections.push(outgoingConnection);
 
-	  var interval = setInterval(()=> outgoingConnection.send(timestamp), 1000);
-	  activeIntervals.push(interval);
+          var interval = setInterval(()=> outgoingConnection.send(timestamp), 1000);
+          activeIntervals.push(interval);
       });
 
       peer.on('connection', connection => {
-	  activeConnections.push(connection);
+          activeConnections.push(connection);
 
-	  connect.on('data', updateTimestamp);
+          connect.on('data', updateTimestamp);
 
-	  var interval = setInterval(() => connection.send(timestamp), 1000);
-	  activeIntervals.push(interval);
+          var interval = setInterval(() => connection.send(timestamp), 1000);
+          activeIntervals.push(interval);
       });
 
 
@@ -226,7 +226,7 @@
     
       peer.on('call', call => {
           console.log("received call");
-	  activeCalls.push(call);
+          activeCalls.push(call);
           call.answer(gumStream);
 
           call.on('stream', handleCallStream);
@@ -238,21 +238,21 @@
       changeButtonState('waiting');
       
       startRecordingButton.addEventListener("click",  () => {
-	  setInterval(() => console.log('gothere ' + timestamp), 5000 );
+          setInterval(() => console.log('gothere ' + timestamp), 5000 );
 
-	  progressBar.style.width = "0%;"
-	  
-	  if (wavesurfer) {
+          progressBar.style.width = "0%;"
+          
+          if (wavesurfer) {
               wavesurfer.destroy();
           }
 
-	  if (isHost) {
-	      changeButtonState('recording');
-	  }
-	  else {
-	      changeButtonState('guestrecording');
-	  }
-	  
+          if (isHost) {
+              changeButtonState('recording');
+          }
+          else {
+              changeButtonState('guestrecording');
+          }
+          
           // Initialize recorder
           leftchannel = [];
 
@@ -283,10 +283,10 @@
           gain.connect(recorder);
 
           recorder.onaudioprocess = (e) => {
-	      timestamp++;
+              timestamp++;
               leftchannel.push({timestamp: timestamp,
-				samples: new Float32Array(e.inputBuffer.getChannelData(0))
-			       });
+                                samples: new Float32Array(e.inputBuffer.getChannelData(0))
+                               });
           }
           
           navigator.mediaDevices.getUserMedia( {
@@ -301,7 +301,7 @@
               },
               err => {
                   console.error(err);
-		  changeButtonState('waiting');
+                  changeButtonState('waiting');
               });
       });
 
@@ -309,13 +309,13 @@
       function encode(left) {
           var encoder = new WavAudioEncoder(context.sampleRate, 2);
           for (var sampleStruct of left) {
-	      var sampleBuffer = sampleStruct.samples;
-	      
+              var sampleBuffer = sampleStruct.samples;
+              
               encoder.encode([sampleBuffer, sampleBuffer]);
           }
           blob = encoder.finish();
 
-	  return blob;
+          return blob;
       }
       
       stopRecordingButton.addEventListener("click",  () => {
@@ -324,9 +324,9 @@
           mediaStream.disconnect();
           gumStream.getAudioTracks()[0].stop();
 
-	  activeCalls.forEach(call => call.close());
+          activeCalls.forEach(call => call.close());
 
-	  wavesurfer = WaveSurfer.create({
+          wavesurfer = WaveSurfer.create({
               container: '#waveform',
               audioContext: context,
               waveColor: 'violet',
@@ -340,12 +340,12 @@
 
 
           var blob = encode(leftchannel);
-	  wavesurfer.empty();
+          wavesurfer.empty();
           wavesurfer.clearRegions();
           wavesurfer.loadBlob(blob);
           wavesurfer.enableDragSelection({});
 
-	  changeButtonState("editing");
+          changeButtonState("editing");
       });
 
       playButton.addEventListener("click", () => {
@@ -393,10 +393,10 @@
           
           var blob = encode(leftchannel);
 
-	  wavesurfer.empty();
+          wavesurfer.empty();
           wavesurfer.clearRegions();
           wavesurfer.loadBlob(blob);
-          wavesurfer.enableDragSelection({});	  
+          wavesurfer.enableDragSelection({});     
       }
       
       function uploadToS3()
@@ -417,18 +417,18 @@
               var key = new Date().toISOString() + '.mp3';
               var encoder = new Mp3LameEncoder(context.sampleRate, 160);
 
-	      progressBar.style.backgroundColor = "#34ff66";
-	      leftchannel.forEach( (sampleStruct, index) => {
-		  var sampleBuffer = sampleStruct.samples;
+              progressBar.style.backgroundColor = "#34ff66";
+              leftchannel.forEach( (sampleStruct, index) => {
+                  var sampleBuffer = sampleStruct.samples;
                   encoder.encode([sampleBuffer, sampleBuffer]);
-		  var progress = Math.round( index / leftchannel.length * 100);
-		  progressBar.style.width = progress + "%";
-	      });
+                  var progress = Math.round( index / leftchannel.length * 100);
+                  progressBar.style.width = progress + "%";
+              });
 
               var mp3blob = encoder.finish();
 
 
-	      progressBar.style.backgroundColor = "#659cef";
+              progressBar.style.backgroundColor = "#659cef";
               s3.upload({
                   Key: key,
                   Body: mp3blob,
