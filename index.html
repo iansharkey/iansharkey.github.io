@@ -1,0 +1,83 @@
+<html>
+
+  <head>
+  </head>
+
+  <body>
+    <button id="startRecording">Start Recording</button>
+    <button id="stopRecording">Stop Recording</button>
+    <button id="download">Download Video</button>
+    
+
+    <video id="preview" muted playsinline autoplay loop></video>
+    <script src="https://www.WebRTC-Experiment.com/RecordRTC.js"></script>
+    <script>
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
+      var startRecordingButton = document.getElementById("startRecording");
+      var stopRecordingButton = document.getElementById("stopRecording");
+      var downloadButton = document.getElementById("download");
+      var previewPane = document.getElementById("preview");     
+      
+
+      var stream;
+      var url
+      var recorder;
+      
+      startRecordingButton.addEventListener('click', () => {
+	  blobs = [];
+	  navigator.mediaDevices.getUserMedia({
+	      audio: true,
+	      video: {
+		  facingMode: 'user',
+		  width: 1280
+	      }
+	  }).then(_stream => {
+	      stream = _stream;
+
+	      setTimeout(()=>{
+		  if (stream.active) {
+		      preview.srcObject = stream;
+		      preview.style.transform = 'scale(-1, 1)';
+	      
+		      recorder = RecordRTC(stream, {
+			  type: 'video',
+			  numberOfAudioChannels: 1
+		      });
+
+		      recorder.startRecording();
+		  }
+		  else {
+		      console.log('inactive!');
+		  }
+	      }, 1750);
+
+	  });
+      });
+
+      stopRecordingButton.addEventListener('click', () => {
+	  recorder.stopRecording(() => {
+	      url = recorder.toURL();
+	  });
+
+	  stream.getAudioTracks()[0].stop();
+	  stream.getVideoTracks()[0].stop();
+      });
+
+      downloadButton.addEventListener("click", () => {
+
+          var a = document.createElement("a");
+          document.body.appendChild(a);
+          a.style = "display: none";
+          a.href = url;
+          a.download = "video.mp4";
+          a.click();
+          window.URL.revokeObjectURL(url);
+      });
+      
+    </script>
+    
+  </body>
+
+</html>
